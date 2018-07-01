@@ -6,6 +6,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from pandas import DataFrame,Series
+import pandas as pd
 
 
 def crawel_east_money():
@@ -67,5 +68,80 @@ def crawel_east_money():
         file_content.drop(file_content.index,inplace=True)
 
 
+def data_deal():
+    """
+    得到上市满三年，每年roe大于8%的上市公司
+    :return:
+    """
+    file_path = r'F:\git\public_company_analysis'
+    file_name = 'result.csv'
+    dataframe_2015 = pd.read_csv(file_path + r'\201512.csv',index_col=0,converters = {u'股票代码':str})
+    dataframe_2016 = pd.read_csv(file_path + r'\201612.csv', index_col=0, converters={u'股票代码': str})
+    dataframe_2017 = pd.read_csv(file_path + r'\201712.csv', index_col=0, converters={u'股票代码': str})
+
+    column_name = ['code', 'name', 'income_2015', 'profit_2015', 'roe_2015(%)','income_2016', 'profit_2016',
+                   'roe_2016(%)','income_2017', 'profit_2017', 'roe_2017(%)']
+    file_content = DataFrame(columns=column_name)  # 创建空 DataFrame
+
+    # 遍历2015年的上市公司
+    for i in range(0,len(dataframe_2015)-1):
+        roe2015 = dataframe_2015.iloc[i][4]  # 得到2015年 roe
+        # 对缺失值做处理
+        if roe2015 == '' or roe2015 == '-':
+            roe2015 = '0'
+        roe2015 = float(roe2015)
+        company_name = dataframe_2015.iloc[i][1]
+
+        if roe2015 >= 8.0:  # 规定只分析roe大于8的上市公司
+            code = dataframe_2015.iloc[i][0]  # 得到股票代码
+        else:  # 继续下一个公司
+            continue
+
+        # 遍历2016年的上市公司，寻找股票代码相同的公司
+        for j in range(0, len(dataframe_2016) - 1):
+            status_indict = 0  # 状态标志
+            if code == dataframe_2016.iloc[j][0]:
+                roe2016 = dataframe_2016.iloc[j][4]
+                # 对缺失值做处理
+                if roe2016 == '' or roe2016 == '-':
+                    roe2016 = '0'
+            else:  # 继续下一个公司对比
+                continue
+            roe2016 = float(roe2016)
+            if roe2016 < 8.0:  # 当不满足roe要求时，直接跳出循环
+                break
+
+            # 遍历2017年的上市公司，寻找股票代码相同的公司
+            for k in range(0, len(dataframe_2017) - 1):
+                if code == dataframe_2017.iloc[k][0]:
+                    roe2017 = dataframe_2017.iloc[k][4]
+                    # 对缺失值做处理
+                    if roe2017 == '' or roe2017 == '-':
+                        roe2017 = '0'
+                else:
+                    continue
+                roe2017 = float(roe2017)
+                if roe2017 < 8.0:
+                    status_indict = 1
+                    break  # 当不满足roe要求时，直接跳出循环
+
+                temp_list = [code, company_name, dataframe_2015.iloc[i][2], dataframe_2015.iloc[i][3], roe2015,
+                             dataframe_2016.iloc[j][2], dataframe_2016.iloc[j][3], roe2016,
+                             dataframe_2017.iloc[k][2], dataframe_2017.iloc[k][3], roe2017]
+                temp_content = Series(temp_list, index=column_name)
+                file_content = file_content.append(temp_content, ignore_index=True)
+                print('continue')
+
+            if status_indict == 1:
+                break
+
+    # 存储csv文件
+    file_content.to_csv(file_name, encoding='utf-8')
+    print('ok')
+
+
 if __name__ == '__main__':
-    crawel_east_money()
+    # crawel_east_money()
+    data_deal()
+
+    pass
